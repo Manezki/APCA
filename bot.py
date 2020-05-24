@@ -1,6 +1,6 @@
 import aiml
 from sentiment import getSentiment
-from mutate import mutateMessage
+from mutate import mutateMessage, SynonymNotFound
 
 # Create the kernel and learn AIML files
 kernel = aiml.Kernel()
@@ -15,9 +15,14 @@ while True:
 
     bot_message = kernel.respond(user_message)
     bot_sentiment = getSentiment(bot_message)
+    bot_sentiment = 0.5
 
     while (bot_sentiment <= user_sentiment) and (bot_sentiment < 0.75):
-        bot_message = mutateMessage(bot_message)
-        bot_sentiment = getSentiment(bot_message)
+        try:
+            bot_message = mutateMessage(bot_message)
+            bot_sentiment = getSentiment(bot_message)
+            bot_sentiment = 1.0
+        except SynonymNotFound:
+            break
     
     print(bot_message)
