@@ -53,16 +53,35 @@ def _changeRoot(document):
     return " ".join(new_text)
 
 
+def _changeAdjective(document):
+    """
+    Changes the adjectives to synonyms from the input document.
+    """
+
+    new_text = []
+
+    for token in document:
+        print(token, token.pos_, token.dep_)
+        if token.pos_ == "ADJ":
+            synonym = _getSynonym(token)
+            new_text.append(str(synonym))
+        else:
+            new_text.append(str(token))
+
+    return " ".join(new_text)
+
+
+
 def mutateMessage(text):
     
     assert isinstance(text, str)
 
     document = nlp(text)
 
-    response = _changeRoot(document)
+    response = _changeAdjective(document)
 
     return response
 
 
 if __name__ == "__main__":
-    mutateMessage("I like cats")
+    mutateMessage("I am doing good")

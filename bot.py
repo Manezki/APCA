@@ -15,13 +15,21 @@ while True:
 
     bot_message = kernel.respond(user_message)
     bot_sentiment = getSentiment(bot_message)
+    # TODO This should be omitted after getSentiment works
     bot_sentiment = 0.5
 
+    attempts = 0
     while (bot_sentiment <= user_sentiment) and (bot_sentiment < 0.75):
+        attempts += 1
         try:
             bot_message = mutateMessage(bot_message)
             bot_sentiment = getSentiment(bot_message)
+            # TODO This should be omitted after getSentiment works
             bot_sentiment = 1.0
+
+            if attempts > 5:
+                break
+
         except SynonymNotFound:
             break
     
