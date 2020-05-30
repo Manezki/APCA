@@ -1,4 +1,4 @@
-import aiml
+from programy.clients.embed.basic import EmbeddedDataFileBot
 from sentiment import getSentiment
 from mutate import mutateMessage, SynonymNotFound
 import telegram
@@ -8,23 +8,43 @@ import json
 import logging
 from os import path as op
 
-logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
-                     level=logging.INFO,
-                     datefmt='%m-%d %H:%M:%S',
-                     filename=op.join(op.dirname(__file__), "log.txt"),
-                     filemode="a")
 
-# Create the kernel and learn AIML files
-kernel = aiml.Kernel()
-kernel.learn("AIMLs/*.aiml")
+files = {'aiml': ['rosie-master/lib/aiml'],
+         'properties': 'rosie-master/lib/system/rosie.properties',
+         'defaults': 'rosie-master/lib/system/rosie.pdefaults',
+         'sets': ['rosie-master/lib/sets'],
+         'maps': ['rosie-master/lib/maps'],
+         'denormals': 'rosie-master/lib/substitutions/denormal.substitution',
+         'normals': 'rosie-master/lib/substitutions/normal.substitution',
+         'genders': 'rosie-master/lib/substitutions/gender.substitution',
+         'persons': 'rosie-master/lib/substitutions/person.substitution',
+         'person2s': 'rosie-master/lib/substitutions/person2.substitution',
+         }
+
+chatbot = EmbeddedDataFileBot(files)
+
+# Logger configuration needs to be AFTER EmbeddedDataFileBot invokation
+tg_logger = logging.getLogger('APCA')
+tg_logger.setLevel(logging.DEBUG)
+
+fh = logging.FileHandler(filename=op.join(op.dirname(__file__), "log.txt"), mode="a")
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+fh.setFormatter(formatter)
+
+tg_logger.addHandler(fh)
+
 
 with open("secrets.json", "r") as secrets:
     tg_token = json.load(secrets)["TelegramToken"]
 
 
 def asnwerTelegramMessage(messageUpdate, callbackContext):
+    """
+    Answers to messages posted on Telegram.
+    """
 
-    logging.log(logging.INFO, "User {} send message: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), messageUpdate.message.text))
+    tg_logger.log(logging.INFO, "User {} send message: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), messageUpdate.message.text))
 
     bot = callbackContext.bot
     sender = messageUpdate.effective_user
@@ -35,14 +55,19 @@ def asnwerTelegramMessage(messageUpdate, callbackContext):
     bot_response = generateResponse(message, user_id=sender_id)
 
     bot.send_message(chat_id=messageUpdate.message.chat_id, text=bot_response)
-    logging.log(logging.INFO, "Bot responded to user {}: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), bot_response))
-    return
+    
+    tg_logger.log(logging.INFO, "Bot responded to user {}: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), bot_response))
 
 
 def generateResponse(user_message, user_id=0):
+    """
+    Given message from user, generates an answer to the user.
+    """
     user_sentiment = getSentiment(user_message)
 
-    bot_message = kernel.respond(user_message, sessionID=user_id)
+    context = chatbot.create_client_context(user_id)    
+    
+    bot_message = context.bot.ask_question(context, user_message)
     bot_sentiment = getSentiment(bot_message)
     # TODO This should be omitted after getSentiment works
     bot_sentiment = 0.5
@@ -70,7 +95,7 @@ def errorLogger(update, context):
     if isinstance(update, NetworkError):
         pass
     else:
-        logging.log(logging.ERROR, "TelegramError: {} raised when processing following update: {}".format(context.error,
+        tg_logger.log(logging.ERROR, "TelegramError: {} raised when processing following update: {}".format(context.error,
                                                                                                          update))
 
 
