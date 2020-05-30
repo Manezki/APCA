@@ -61,7 +61,6 @@ def _changeAdjective(document):
     new_text = []
 
     for token in document:
-        print(token, token.pos_, token.dep_)
         if token.pos_ == "ADJ":
             synonym = _getSynonym(token)
             new_text.append(str(synonym))
