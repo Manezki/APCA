@@ -1,5 +1,5 @@
 from programy.clients.embed.basic import EmbeddedDataFileBot
-from sentiment import getSentiment
+from sentiment import getSentiment, getEmoji
 from mutate import mutateMessage, SynonymNotFound
 import telegram
 from telegram.ext import (Updater, MessageHandler, Filters)
@@ -70,16 +70,14 @@ def generateResponse(user_message, user_id=0):
     bot_message = context.bot.ask_question(context, user_message)
     bot_sentiment = getSentiment(bot_message)
     # TODO This should be omitted after getSentiment works
-    bot_sentiment = 0.5
 
     attempts = 0
-    while (bot_sentiment <= user_sentiment) and (bot_sentiment < 0.75):
+    while (-1 <= user_sentiment <= 1) and (-1 <= bot_sentiment <= 1):
         attempts += 1
         try:
             bot_message = mutateMessage(bot_message)
-            bot_sentiment = getSentiment(bot_message)
+            bot_emoji = getEmoji(user_message)
             # TODO This should be omitted after getSentiment works
-            bot_sentiment = 1.0
 
             if attempts > 5:
                 break
@@ -87,7 +85,7 @@ def generateResponse(user_message, user_id=0):
         except SynonymNotFound:
             break
     
-    return bot_message
+    return bot_message + bot_emoji
 
 
 def errorLogger(update, context):
