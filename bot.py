@@ -9,6 +9,9 @@ import logging
 from os import path as op
 
 
+SYNONYM_SWAP_ATTEMPT_LIMIT = 5
+
+
 files = {'aiml': ['rosie-master/lib/aiml'],
          'properties': 'rosie-master/lib/system/rosie.properties',
          'defaults': 'rosie-master/lib/system/rosie.pdefaults',
@@ -81,19 +84,34 @@ def generateExperimentGroupResponse(user_message, user_id=0):
     bot_message = context.bot.ask_question(context, user_message)
     bot_sentiment = getSentiment(bot_message)
 
-    attempts = 0
-    # BUG Does not iterate till sentiment is amplified
-    while (-1 <= user_sentiment <= 1) and (-1 <= bot_sentiment <= 1):
-        attempts += 1
-        try:
-            bot_message = mutateMessage(bot_message)
-            # BUG Does not check if bot sentiment is higher than the user message
+    positive_user = user_sentiment > 0
 
-            if attempts > 5:
-                break
+    attempts = 1
+    # If user's sentiment is negative, the bot's response should be more negative. And vice versa for the positive
+    while ((positive_user and (bot_sentiment >= user_sentiment)) or ((not positive_user) and (bot_sentiment <= user_sentiment))):
+
+        if attempts > SYNONYM_SWAP_ATTEMPT_LIMIT:
+            break
+
+        try:
+            candidate_message = mutateMessage(bot_message)
+            candidate_sentiment = getSentiment(candidate_message)
+
+            if positive_user:
+                if candidate_sentiment > bot_sentiment:
+                    bot_sentiment = candidate_sentiment
+                    bot_message = candidate_message
+            else:
+                if candidate_sentiment < bot_sentiment:
+                    bot_sentiment = candidate_sentiment
+                    bot_message = candidate_message
 
         except SynonymNotFound:
+            # If swapping of the synonym is NOT possible, it should not be possible on the subsequent tries neither
+            attempts += SYNONYM_SWAP_ATTEMPT_LIMIT
             break
+
+        attempts += 1
     
     bot_emoji = getEmoji(bot_message)
 
