@@ -59,7 +59,18 @@ def asnwerTelegramMessage(messageUpdate, callbackContext):
     tg_logger.log(logging.INFO, "Bot responded to user {}: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), bot_response))
 
 
-def generateResponse(user_message, user_id=0):
+def generateControlGroupResponse(user_message, user_id=0):
+    """
+    Given message from user, generates an answer to the user.
+    """
+    context = chatbot.create_client_context(user_id)
+
+    bot_message = context.bot.ask_question(context, user_message)
+
+    return bot_message
+
+
+def generateExperimentGroupResponse(user_message, user_id=0):
     """
     Given message from user, generates an answer to the user.
     """
@@ -69,15 +80,15 @@ def generateResponse(user_message, user_id=0):
     
     bot_message = context.bot.ask_question(context, user_message)
     bot_sentiment = getSentiment(bot_message)
-    # TODO This should be omitted after getSentiment works
 
     attempts = 0
+    # BUG Does not iterate till sentiment is amplified
     while (-1 <= user_sentiment <= 1) and (-1 <= bot_sentiment <= 1):
         attempts += 1
         try:
             bot_message = mutateMessage(bot_message)
+            # BUG Does not check if bot sentiment is higher than the user message
             bot_emoji = getEmoji(user_message)
-            # TODO This should be omitted after getSentiment works
 
             if attempts > 5:
                 break
@@ -88,8 +99,20 @@ def generateResponse(user_message, user_id=0):
     return bot_message + bot_emoji
 
 
+def generateResponse(user_message, user_id=0):
+    """
+    Assigns the user into an A/B test-group, and returns a response for the user.
+    """
+    # Split users based on their user-id. Should be 50/50 split
+    if (user_id % 2) == 0:
+        return generateControlGroupResponse(user_message, user_id)
+    else:
+        return generateExperimentGroupResponse(user_message, user_id)
+
+
 def errorLogger(update, context):
 
+    # Pass network errors, as they can flood the log-file
     if isinstance(update, NetworkError):
         pass
     else:
