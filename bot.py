@@ -88,7 +88,6 @@ def generateExperimentGroupResponse(user_message, user_id=0):
         try:
             bot_message = mutateMessage(bot_message)
             # BUG Does not check if bot sentiment is higher than the user message
-            bot_emoji = getEmoji(user_message)
 
             if attempts > 5:
                 break
@@ -96,6 +95,8 @@ def generateExperimentGroupResponse(user_message, user_id=0):
         except SynonymNotFound:
             break
     
+    bot_emoji = getEmoji(bot_message)
+
     return bot_message + bot_emoji
 
 
