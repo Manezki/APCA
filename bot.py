@@ -2,6 +2,7 @@ from programy.clients.embed.basic import EmbeddedDataFileBot
 from sentiment import getSentiment, getEmoji
 from mutate import mutateMessage, SynonymNotFound
 import telegram
+from telegram import update
 from telegram.ext import (Updater, MessageHandler, Filters)
 from telegram.error import NetworkError
 import json
@@ -42,7 +43,7 @@ with open("secrets.json", "r") as secrets:
     tg_token = json.load(secrets)["TelegramToken"]
 
 
-def asnwerTelegramMessage(messageUpdate, callbackContext):
+def answerTelegramMessage(messageUpdate, callbackContext):
     """
     Answers to messages posted on Telegram.
     """
@@ -52,7 +53,7 @@ def asnwerTelegramMessage(messageUpdate, callbackContext):
     bot = callbackContext.bot
     sender = messageUpdate.effective_user
     
-    sender_id= int(sender["id"])
+    sender_id = int(sender["id"])
     message = messageUpdate.message.text
 
     bot_response = generateResponse(message, user_id=sender_id)
@@ -60,6 +61,8 @@ def asnwerTelegramMessage(messageUpdate, callbackContext):
     bot.send_message(chat_id=messageUpdate.message.chat_id, text=bot_response)
     
     tg_logger.log(logging.INFO, "Bot responded to user {}: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), bot_response))
+
+    j.run_once(survey_callback, 300, context=messageUpdate.message.chat_id)
 
 
 def generateControlGroupResponse(user_message, user_id=0):
@@ -139,10 +142,18 @@ def errorLogger(update, context):
                                                                                                          update))
 
 
+def survey_callback(context: telegram.ext.CallbackContext):
+
+    context.bot.send_message(chat_id=context.job.context, text='How are you finding our conversation so far? Please answer this short survey and let me know! \U0001F604 <a href="https://docs.google.com/forms/d/e/1FAIpQLSfDMBHoSnWCcHVQpw_LRCDt1vnfPIbboKliQX4gfIheSe4rFg/viewform?usp=sf_link"> Start Survey</a>',
+parse_mode=telegram.ParseMode.HTML)
+    j.stop()
+
+
 updater = Updater(token=tg_token, workers=1, use_context=True)
+j = updater.job_queue
 dispatcher = updater.dispatcher
 
-dispatcher.add_handler(MessageHandler((~Filters.command) & Filters.text, asnwerTelegramMessage))
+dispatcher.add_handler(MessageHandler((~Filters.command) & Filters.text, answerTelegramMessage))
 dispatcher.add_error_handler(errorLogger)
 
 updater.start_polling()
