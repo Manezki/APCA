@@ -3,13 +3,21 @@ import json
 import requests
 import random
 import functools
+import pickle
 
 nlp = spacy.load("en_core_web_sm")
+
+try:
+    with open("trigram_model.pickle", "rb") as language_model_file:
+        language_model = pickle.load(language_model_file)
+except FileNotFoundError:
+    language_model = {}
+
+
 with open("secrets.json", "r") as secrets:
     api_key = json.load(secrets)["TheSaurusAPI"]
 
 pos_lookup = {"VERB": "verb", "ADJ": "adjective", "NOUN": "noun"}
-
 
 class SynonymNotFound(Exception):
     pass
@@ -58,16 +66,41 @@ def _changeAdjective(document):
     Changes the adjectives to synonyms from the input document.
     """
 
-    new_text = []
+    new_text = ["<s>", "<s>"]
 
     for token in document:
         if token.pos_ == "ADJ":
-            synonym = _getSynonym(token)
-            new_text.append(str(synonym))
+
+            try:
+                synonyms = _getSynonyms(token)
+                
+                thesaurus_pos = pos_lookup["ADJ"]
+                adj_synonyms = synonyms[thesaurus_pos]["syn"]
+
+                w_1 = new_text[-2].lower()
+                w_2 = new_text[-1].lower()
+
+                lm = language_model[(w_1, w_2)]
+
+                synonym_probas = [lm.get(w_3.lower(), 0.000001) for w_3 in adj_synonyms]
+
+                total = sum(synonym_probas)
+
+                synonym_probas = [proba/total for proba in synonym_probas]
+
+                chosen_adj = random.choices(adj_synonyms, weights=synonym_probas)[0]
+
+                new_text.append(chosen_adj)
+
+            # Be general, so we don't get runtime problems
+            except Exception:
+                new_text.append(str(token))
+
         else:
             new_text.append(str(token))
 
-    return " ".join(new_text)
+    # Drop the <s> tokens from the start
+    return " ".join(new_text[2:])
 
 
 
