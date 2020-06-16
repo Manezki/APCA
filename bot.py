@@ -12,9 +12,9 @@ from os import path as op
 
 
 SYNONYM_SWAP_ATTEMPT_LIMIT = 5
+USER_HISTORY_DIRECTORY = op.join(op.dirname(__file__), "user_histories")
 
-
-files = {'aiml': ['rosie-master/lib/aiml'],
+chatbot_files = {'aiml': ['rosie-master/lib/aiml'],
          'properties': 'rosie-master/lib/system/rosie.properties',
          'defaults': 'rosie-master/lib/system/rosie.pdefaults',
          'sets': ['rosie-master/lib/sets'],
@@ -25,8 +25,6 @@ files = {'aiml': ['rosie-master/lib/aiml'],
          'persons': 'rosie-master/lib/substitutions/person.substitution',
          'person2s': 'rosie-master/lib/substitutions/person2.substitution',
          }
-
-chatbot = EmbeddedDataFileBot(files)
 
 # Logger configuration needs to be AFTER EmbeddedDataFileBot invokation
 tg_logger = logging.getLogger('APCA')
@@ -85,12 +83,21 @@ def answerTelegramMessage(messageUpdate, callbackContext):
     sender_id = int(sender["id"])
     message = messageUpdate.message.text
 
+
+    # TODO Users should be added to the consents-set when they give consent
+    if sender_id in ___consents:
+        with open(op.join(USER_HISTORY_DIRECTORY, str(sender_id) + ".txt"), "a") as history:
+            line = message.replace("\n", " ")
+            history.write(line + "\n")
+
+
     bot_response = generateResponse(message, user_id=sender_id)
 
     bot.send_message(chat_id=messageUpdate.message.chat_id, text=bot_response)
     
     tg_logger.log(logging.INFO, "Bot responded to user {}: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), bot_response))
 
+    # TODO Invoke this from consent-reply, and we can work around the j.stop problem
     j.run_once(survey_callback, 300, context=messageUpdate.message.chat_id)
 
 
@@ -179,6 +186,9 @@ parse_mode=telegram.ParseMode.HTML)
     j.stop(context=context.job.context)
 
 
+___consents = set()
+chatbot = EmbeddedDataFileBot(chatbot_files)
+
 updater = Updater(token=tg_token, workers=1, use_context=True)
 j = updater.job_queue
 dispatcher = updater.dispatcher
@@ -190,3 +200,4 @@ dispatcher.add_handler(MessageHandler((~Filters.command) & Filters.text, answerT
 dispatcher.add_error_handler(errorLogger)
 
 updater.start_polling()
+print("Ready to receive messages")
