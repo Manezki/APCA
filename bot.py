@@ -11,9 +11,11 @@ import json
 import logging
 from os import path as op
 import os
+import datetime
 
 
 SYNONYM_SWAP_ATTEMPT_LIMIT = 5
+HISTORY_DELIMITER = "__¤¤__"
 USER_HISTORY_DIRECTORY = op.join(op.dirname(__file__), "user_histories")
 
 if not op.exists(USER_HISTORY_DIRECTORY):
@@ -88,7 +90,9 @@ def button(update, context):
             context.job_queue.run_once(surveyCallbackExperimentGroup, 180, context=update.callback_query.message.chat.id)
 
         # Re-engage in conversation after 23 hours
-        context.job_queue.run_once(reengageConversation, 82800, context=update.callback_query.message.chat.id)
+        reengage_context = {"chat_id": update.callback_query.message.chat.id,
+                            "user_id": int(update.effective_user.id)}
+        context.job_queue.run_once(reengageConversation, 82800, context=reengage_context)
         
     elif query.data == "2":
         query.edit_message_text(
@@ -111,16 +115,24 @@ def answerTelegramMessage(messageUpdate, callbackContext):
     message = messageUpdate.message.text
 
 
-    # TODO Users should be added to the consents-set when they give consent
     if sender_id in ___consents:
         with open(op.join(USER_HISTORY_DIRECTORY, str(sender_id) + ".txt"), "a") as history:
-            line = message.replace("\n", " ")
+            user_message = message.replace("\n", " ")
+
+            line = HISTORY_DELIMITER.join(["User", str(datetime.datetime.now()), user_message])
             history.write(line + "\n")
 
 
     bot_response = generateResponse(message, user_id=sender_id)
 
     bot.send_message(chat_id=messageUpdate.message.chat_id, text=bot_response)
+
+    if sender_id in ___consents:
+        with open(op.join(USER_HISTORY_DIRECTORY, str(sender_id) + ".txt"), "a") as history:
+            bot_message = bot_response.replace("\n", " ")
+
+            line = HISTORY_DELIMITER.join(["Bot", str(datetime.datetime.now()), bot_message])
+            history.write(line + "\n")
     
     tg_logger.log(logging.INFO, "Bot responded to user {}: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), bot_response))
 
@@ -219,9 +231,17 @@ parse_mode=telegram.ParseMode.HTML)
 
 def reengageConversation(context: telegram.ext.CallbackContext):
 
-    context.bot.send_message(chat_id=context.job.context, text='Hey, how are you doing today?',
+    context.bot.send_message(chat_id=context.job.context["chat_id"], text='Hey, how are you doing today?',
 parse_mode=telegram.ParseMode.HTML)
-    tg_logger.log(logging.INFO, "Re-engaged in a conversation in chat: {}".format(context.job.context))
+
+    # Only messaged for users with consent, so no need for check
+    with open(op.join(USER_HISTORY_DIRECTORY, str(context.job.context["user_id"]) + ".txt"), "a") as history:
+        bot_message = "Hey, how are you doing today?"
+
+        line = HISTORY_DELIMITER.join(["Bot", str(datetime.datetime.now()), bot_message])
+        history.write(line + "\n")
+
+    tg_logger.log(logging.INFO, "Re-engaged in a conversation in chat: {}".format(context.job.context["chat_id"]))
 
 
 ___consents = set()
