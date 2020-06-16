@@ -10,10 +10,14 @@ from telegram.error import NetworkError
 import json
 import logging
 from os import path as op
+import os
 
 
 SYNONYM_SWAP_ATTEMPT_LIMIT = 5
 USER_HISTORY_DIRECTORY = op.join(op.dirname(__file__), "user_histories")
+
+if not op.exists(USER_HISTORY_DIRECTORY):
+    os.makedirs(USER_HISTORY_DIRECTORY)
 
 chatbot_files = {'aiml': ['rosie-master/lib/aiml'],
          'properties': 'rosie-master/lib/system/rosie.properties',
