@@ -67,6 +67,8 @@ def button(update, context):
         ___consents.add(int(update.effective_user.id))
 
         context.job_queue.run_once(survey_callback, 180, context=update.callback_query.message.chat.id)
+        # Re-engage in conversation after 23 hours
+        context.job_queue.run_once(reengageConversation, 82800, context=update.callback_query.message.chat.id)
         
     elif query.data == "2":
         query.edit_message_text(
@@ -186,6 +188,13 @@ def survey_callback(context: telegram.ext.CallbackContext):
     context.bot.send_message(chat_id=context.job.context, text='How are you finding our conversation so far? Please answer this short survey and let me know! \U0001F604 <a href="https://docs.google.com/forms/d/e/1FAIpQLSfDMBHoSnWCcHVQpw_LRCDt1vnfPIbboKliQX4gfIheSe4rFg/viewform?usp=sf_link"> Start Survey</a>',
 parse_mode=telegram.ParseMode.HTML)
     tg_logger.log(logging.INFO, "Sent a survey link to chat {}".format(context.job.context))
+
+
+def reengageConversation(context: telegram.ext.CallbackContext):
+
+    context.bot.send_message(chat_id=context.job.context, text='Hey, how are you doing today?',
+parse_mode=telegram.ParseMode.HTML)
+    tg_logger.log(logging.INFO, "Re-engaged in a conversation in chat: {}".format(context.job.context))
 
 
 ___consents = set()
