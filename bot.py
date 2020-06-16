@@ -62,12 +62,17 @@ def button(update, context):
 
     if query.data == "1":
         query.edit_message_text(text="Thank you for participating in our research. You can now start a "
-                                     "conversation with the bot.".format(query.data))
-        tg_logger.log(logging.INFO, "User {} selected 'Yes'".format(update.effective_user.id))
+                                     "conversation with the bot.")
+        tg_logger.log(logging.INFO, "User {} gave a consent".format(update.effective_user.id))
+        ___consents.add(int(update.effective_user.id))
+
+        context.job_queue.run_once(survey_callback, 180, context=update.callback_query.message.chat.id)
+        
     elif query.data == "2":
         query.edit_message_text(
-            text="Thank you for your time. Your data will not be used in our research.".format(query.data))
-        tg_logger.log(logging.INFO, "User {} selected 'No'".format(update.effective_user.id))
+            text="Thank you for your time. Your data will not be used in our research. You can still "
+                 "converse with the bot, but your data won't be recorded.")
+        tg_logger.log(logging.INFO, "User {} user did not give a consent".format(update.effective_user.id))
 
 
 def answerTelegramMessage(messageUpdate, callbackContext):
@@ -97,8 +102,6 @@ def answerTelegramMessage(messageUpdate, callbackContext):
     
     tg_logger.log(logging.INFO, "Bot responded to user {}: {}".format((messageUpdate.effective_user.id, messageUpdate.effective_user.username), bot_response))
 
-    # TODO Invoke this from consent-reply, and we can work around the j.stop problem
-    j.run_once(survey_callback, 300, context=messageUpdate.message.chat_id)
 
 
 def generateControlGroupResponse(user_message, user_id=0):
@@ -183,7 +186,6 @@ def survey_callback(context: telegram.ext.CallbackContext):
     context.bot.send_message(chat_id=context.job.context, text='How are you finding our conversation so far? Please answer this short survey and let me know! \U0001F604 <a href="https://docs.google.com/forms/d/e/1FAIpQLSfDMBHoSnWCcHVQpw_LRCDt1vnfPIbboKliQX4gfIheSe4rFg/viewform?usp=sf_link"> Start Survey</a>',
 parse_mode=telegram.ParseMode.HTML)
     tg_logger.log(logging.INFO, "Sent a survey link to chat {}".format(context.job.context))
-    j.stop(context=context.job.context)
 
 
 ___consents = set()
@@ -194,7 +196,7 @@ j = updater.job_queue
 dispatcher = updater.dispatcher
 
 updater.dispatcher.add_handler(CommandHandler('start', start))
-updater.dispatcher.add_handler(CallbackQueryHandler(button))
+updater.dispatcher.add_handler(CallbackQueryHandler(button, pass_job_queue=True))
 
 dispatcher.add_handler(MessageHandler((~Filters.command) & Filters.text, answerTelegramMessage))
 dispatcher.add_error_handler(errorLogger)
