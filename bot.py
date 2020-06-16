@@ -50,8 +50,8 @@ def start(update, context):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     update.message.reply_text('Please provide your consent for using your information for '
-                              'our research. By clicking "Yes", you allow us to use your'
-                              'User ID, your survey results and you will be able to start a '
+                              'our research. By clicking "Yes", you allow us to use your '
+                              'User ID, chat data and your survey results. You can then proceed to start a '
                               'conversation with the bot. If you click "No", your data will '
                               'be discarded by us and will not be used in our research', reply_markup=reply_markup)
 
