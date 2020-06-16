@@ -1,6 +1,7 @@
 from programy.clients.embed.basic import EmbeddedDataFileBot
 from sentiment import getSentiment, getEmoji
 from mutate import mutateMessage, SynonymNotFound
+from filters import private
 import telegram
 from telegram import update
 from telegram import update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -204,10 +205,10 @@ updater = Updater(token=tg_token, workers=1, use_context=True)
 j = updater.job_queue
 dispatcher = updater.dispatcher
 
-updater.dispatcher.add_handler(CommandHandler('start', start))
-updater.dispatcher.add_handler(CallbackQueryHandler(button, pass_job_queue=True))
+dispatcher.add_handler(CommandHandler('start', start, filters=private))
+dispatcher.add_handler(CallbackQueryHandler(button, pass_job_queue=True))
 
-dispatcher.add_handler(MessageHandler((~Filters.command) & Filters.text, answerTelegramMessage))
+dispatcher.add_handler(MessageHandler((~Filters.command) & Filters.text & private, answerTelegramMessage))
 dispatcher.add_error_handler(errorLogger)
 
 updater.start_polling()
