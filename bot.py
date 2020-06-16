@@ -3,7 +3,8 @@ from sentiment import getSentiment, getEmoji
 from mutate import mutateMessage, SynonymNotFound
 import telegram
 from telegram import update
-from telegram.ext import (Updater, MessageHandler, Filters)
+from telegram import update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (Updater, MessageHandler, Filters, CommandHandler, CallbackQueryHandler)
 from telegram.error import NetworkError
 import json
 import logging
@@ -41,6 +42,34 @@ tg_logger.addHandler(fh)
 
 with open("secrets.json", "r") as secrets:
     tg_token = json.load(secrets)["TelegramToken"]
+
+
+def start(update, context):
+    keyboard = [[InlineKeyboardButton("Yes", callback_data='1')],
+                [InlineKeyboardButton("No", callback_data='2')]]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Please provide your consent for using your information for '
+                              'our research. By clicking "Yes", you allow us to use your'
+                              'User ID, your survey results and you will be able to start a '
+                              'conversation with the bot. If you click "No", your data will '
+                              'be discarded by us and will not be used in our research', reply_markup=reply_markup)
+
+
+def button(update, context):
+    query = update.callback_query
+
+    query.answer()
+
+    if query.data == "1":
+        query.edit_message_text(text="Thank you for participating in our research. You can now start a "
+                                     "conversation with the bot.".format(query.data))
+        tg_logger.log(logging.INFO, "User {} selected 'Yes'".format(update.effective_user.id))
+    elif query.data == "2":
+        query.edit_message_text(
+            text="Thank you for your time. Your data will not be used in our research.".format(query.data))
+        tg_logger.log(logging.INFO, "User {} selected 'No'".format(update.effective_user.id))
 
 
 def answerTelegramMessage(messageUpdate, callbackContext):
@@ -153,6 +182,9 @@ parse_mode=telegram.ParseMode.HTML)
 updater = Updater(token=tg_token, workers=1, use_context=True)
 j = updater.job_queue
 dispatcher = updater.dispatcher
+
+updater.dispatcher.add_handler(CommandHandler('start', start))
+updater.dispatcher.add_handler(CallbackQueryHandler(button))
 
 dispatcher.add_handler(MessageHandler((~Filters.command) & Filters.text, answerTelegramMessage))
 dispatcher.add_error_handler(errorLogger)
