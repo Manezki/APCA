@@ -44,6 +44,11 @@ with open("secrets.json", "r") as secrets:
 
 
 def start(update, context):
+
+    # Skip if user has already given consent
+    if int(update.effective_user.id) in ___consents:
+        return
+
     keyboard = [[InlineKeyboardButton("Yes", callback_data='1')],
                 [InlineKeyboardButton("No", callback_data='2')]]
 
@@ -65,8 +70,12 @@ def button(update, context):
         query.edit_message_text(text="Thank you for participating in our research. You can now start a "
                                      "conversation with the bot.")
         tg_logger.log(logging.INFO, "User {} gave a consent".format(update.effective_user.id))
-        ___consents.add(int(update.effective_user.id))
 
+        # Skip if user has already given consent
+        if int(update.effective_user.id) in ___consents:
+            return
+
+        ___consents.add(int(update.effective_user.id))
         context.job_queue.run_once(survey_callback, 180, context=update.callback_query.message.chat.id)
         # Re-engage in conversation after 23 hours
         context.job_queue.run_once(reengageConversation, 82800, context=update.callback_query.message.chat.id)
