@@ -42,20 +42,20 @@ ax.plot((dist_first.ppf(0.975), dist_first.ppf(0.975)), (0.0, 4.0), color="b", l
 ax.plot((dist_second.ppf(0.025), dist_second.ppf(0.025)), (0.0, 4.0), color="r", linestyle="--", label="95% confidence interval")
 ax.plot((dist_second.ppf(0.975), dist_second.ppf(0.975)), (0.0, 4.0), color="r", linestyle="--")
 
-ax.set_title("Re-engagement ratios (Beta-distribution)")
-ax.set_xlabel("Re-engagement ratio")
-ax.set_ylabel("Pdf")
+ax.set_title("Likelihood of re-engagement probability (Beta-distribution)")
+ax.set_xlabel("Probability of re-engagement")
+ax.set_ylabel("Probability")
 
 ax.legend()
 
-fig.savefig(op.join(CUR_DIR, "Re-engagement-beta.png"))
+fig.savefig(op.join(CUR_DIR, "Re-engagement-betas.png"))
 plt.close(fig=fig)
 
 compared = resample_compare([dist_second, dist_first], n_samples=100_000)
 
 fig, ax = plt.subplots(1, 1, figsize=(16, 9.6))
 
-ax.set_title("Change in re-engagement ratio, from control to experiment.\nEstimated using resampling with 100,000 samples")
+ax.set_title("Change in re-engagement probability, when switching from control to experiment.\nEstimated using resampling with 100,000 samples")
 
 ax.set_xlim((-1, 1))
 n, bins, patches = ax.hist(compared, 100, density=True, alpha=0.8)
@@ -73,8 +73,8 @@ ax.text(compared[lower_idx] + 0.015, max_y - 0.25, "{:.2}".format(compared[lower
 ax.text(compared[upper_idx] + 0.015, max_y - 0.25, "{:.2}".format(compared[upper_idx]), color="r")
 ax.text(compared[int(len(compared)/2)] + 0.015, 2.75, "{:.2}".format(compared[int(len(compared)/2)]), color="g")
 
-ax.set_xlabel("Re-engagement ratio change")
-ax.set_ylabel("Pdf")
+ax.set_xlabel("Difference in re-engagement probability")
+ax.set_ylabel("Approximate probability")
 
 ax.legend()
 
