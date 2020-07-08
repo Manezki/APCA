@@ -20,7 +20,9 @@ Furthermore one needs to [create a Telegram bot](https://core.telegram.org/bots#
 
 ### Other
 
-For the Telegram bot to work properly, one needs to supply the code with a Trigram language model as `trigram_model.pickle` in the root directory. This is **not** supplied in the repository for the space limitations - however, the format of the model is:
+For the Telegram bot to work properly, one needs to supply the code with a Trigram language model as `trigram_model.pickle` in the root directory. This is **not** supplied in the repository for the space limitations - however, the model used for the experiment can be downloaded [here](https://drive.google.com/file/d/1cqETZ9hJwVSD8ChAGRAF_XzXXMTC8wum/view?usp=sharing).
+
+Alternatively, you can define your own model. The format of the model is:
 ```
 trigram_model = {(word_1, word_2): Probability(word_3)}
 ```
